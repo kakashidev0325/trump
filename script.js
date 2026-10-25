@@ -80,8 +80,112 @@ function initSocialLinks() {
   });
 }
 
+function initReveal() {
+  const nodes = document.querySelectorAll(".reveal");
+  if (!nodes.length) return;
+
+  if (!("IntersectionObserver" in window)) {
+    nodes.forEach((node) => node.classList.add("in"));
+    return;
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("in");
+        observer.unobserve(entry.target);
+      });
+    },
+    { threshold: 0.18, rootMargin: "0px 0px -8% 0px" }
+  );
+
+  nodes.forEach((node) => observer.observe(node));
+}
+
+function initConfetti() {
+  const canvas = document.querySelector(".confetti");
+  if (!canvas) return;
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce) return;
+
+  const ctx = canvas.getContext("2d");
+  const colors = ["#e10600", "#ff4b3a", "#f0c14b", "#ffe7a8", "#fff6f1", "#c8102e", "#d4a017"];
+  let pieces = [];
+  let width = 0;
+  let height = 0;
+
+  function resize() {
+    width = canvas.clientWidth;
+    height = canvas.clientHeight;
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+
+  function makePiece(fromTop) {
+    const wide = 6 + Math.random() * 8;
+    return {
+      x: Math.random() * width,
+      y: fromTop ? -20 - Math.random() * height : Math.random() * height,
+      w: wide,
+      h: 8 + Math.random() * 12,
+      vy: 0.7 + Math.random() * 1.7,
+      vx: -0.45 + Math.random() * 0.9,
+      rot: Math.random() * Math.PI,
+      vr: -0.06 + Math.random() * 0.12,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      swing: Math.random() * Math.PI * 2,
+      swingSpeed: 0.015 + Math.random() * 0.02,
+    };
+  }
+
+  function spawn() {
+    const count = Math.max(28, Math.min(70, Math.floor(width / 18)));
+    pieces = Array.from({ length: count }, () => makePiece(false));
+  }
+
+  function frame() {
+    ctx.clearRect(0, 0, width, height);
+    pieces.forEach((piece) => {
+      piece.swing += piece.swingSpeed;
+      piece.y += piece.vy;
+      piece.x += Math.sin(piece.swing) * 0.7 + piece.vx;
+      piece.rot += piece.vr;
+
+      if (piece.y > height + 24) {
+        const next = makePiece(true);
+        piece.x = next.x;
+        piece.y = next.y;
+        piece.vy = next.vy;
+      }
+
+      ctx.save();
+      ctx.translate(piece.x, piece.y);
+      ctx.rotate(piece.rot);
+      ctx.fillStyle = piece.color;
+      ctx.fillRect(-piece.w / 2, -piece.h / 2, piece.w, piece.h);
+      ctx.restore();
+    });
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  spawn();
+  frame();
+  window.addEventListener("resize", () => {
+    resize();
+    spawn();
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  document.documentElement.classList.add("js");
   initContract();
   initNav();
   initSocialLinks();
+  initReveal();
+  initConfetti();
 });
